@@ -1,0 +1,12 @@
+spring:
+  application:
+    name: interview-ai
+  profiles:
+    active: dev
+
+
+app:
+  name: 多模态智能模拟面试评测平台
+  version: 1.0.0
+  description: 基于AI的面试模拟与评测系统
+  author: 讯飞

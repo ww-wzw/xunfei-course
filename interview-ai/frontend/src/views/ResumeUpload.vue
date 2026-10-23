@@ -212,11 +212,12 @@ const reUpload = () => fileInputRef.value?.click()
 
 const onChooseFile = (e) => {
   const file = e.target.files && e.target.files[0]
+  // 无论校验结果如何都先清空 input，保证再次选择同一文件仍能触发 change。
+  e.target.value = ''
   if (file) {
     if (!beforeUpload(file)) return
     doUpload(file)
   }
-  e.target.value = ''
 }
 
 const loadVersions = async (resumeId) => {
@@ -226,8 +227,12 @@ const loadVersions = async (resumeId) => {
 }
 
 const openPreview = async (row) => {
-  const res = await getResumeFileUrl(row.versionId)
-  window.open(res.data.url, '_blank')
+  try {
+    const res = await getResumeFileUrl(row.versionId)
+    window.open(res.data.url, '_blank')
+  } catch (e) {
+    ElMessage.error(e?.message || '获取预览地址失败')
+  }
 }
 
 const openCurrent = () => {

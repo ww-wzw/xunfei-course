@@ -170,7 +170,14 @@ class ResumeService:
         """仅提取简历文本，不落盘、不生成版本记录，供 /api/ai/resume/parse 使用。"""
         if not data:
             raise ResumeError("简历文件为空。")
-        extension = Path(filename).suffix.lower().lstrip(".")
+        # 与 save() 保持一致：解析入口同样受大小限制，避免超大文件撑爆内存。
+        if len(data) > self.max_size:
+            raise ResumeError(
+                f"简历不能超过 {self.max_size // (1024 * 1024)} MB。"
+            )
+        # 先清洗客户端文件名再取扩展名，防止带路径分隔符的名字绕过格式检查。
+        clean_name = self._safe_filename(filename)
+        extension = Path(clean_name).suffix.lower().lstrip(".")
         if extension not in self.ALLOWED_EXTENSIONS:
             raise ResumeError("请上传 PDF、DOC 或 DOCX 格式的简历。")
         return self._extract(data, extension)

@@ -53,7 +53,10 @@ public class QuestController {
             @RequestParam(required = false) Long scenarioId,
             @RequestParam(required = false) Integer difficulty,
             @RequestParam(required = false) String keyword) {
-        return Result.success(questionService.pageQuery(current, size, scenarioId, difficulty, keyword));
+        // 限制分页参数范围，防止超大 size 一次性拖垮数据库查询。
+        long safeCurrent = Math.max(current, 1);
+        long safeSize = Math.min(Math.max(size, 1), 100);
+        return Result.success(questionService.pageQuery(safeCurrent, safeSize, scenarioId, difficulty, keyword));
     }
 
     @PreAuthorize("hasAuthority('question:view') and !hasRole('candidate')")
@@ -81,7 +84,9 @@ public class QuestController {
     public Result<List<QuestionVO>> random(
             @RequestParam Long scenarioId,
             @RequestParam(defaultValue = "5") int count) {
-        return Result.success(questionService.randomQuestions(scenarioId, count)
+        // 随机抽题数量限制在 1-20，避免一次拉取整个题库。
+        int safeCount = Math.min(Math.max(count, 1), 20);
+        return Result.success(questionService.randomQuestions(scenarioId, safeCount)
                 .stream()
                 .map(QuestionVO::from)
                 .collect(Collectors.toList()));

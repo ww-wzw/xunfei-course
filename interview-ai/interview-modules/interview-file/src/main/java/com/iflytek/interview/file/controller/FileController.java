@@ -1,5 +1,6 @@
 package com.iflytek.interview.file.controller;
 
+import com.iflytek.interview.common.exception.BusinessException;
 import com.iflytek.interview.common.response.Result;
 import com.iflytek.interview.common.security.SecurityUtil;
 import com.iflytek.interview.file.entity.FileRecord;
@@ -35,19 +36,27 @@ public class FileController {
         // 1. 业务层校验（类型 + 大小）
         fileValidator.validate(file);
 
-        // 2. 登录用户
+        // 2. module 参数校验：该值直接参与对象路径拼接，只允许小写字母、数字、下划线和短横线
+        if (module == null || !module.matches("[a-z0-9][a-z0-9_-]{0,31}")) {
+            throw new BusinessException(400, "module 参数不合法");
+        }
+
+        // 3. 登录用户
         Long userId = SecurityUtil.getCurrentUserId();
 
-        // 3. 唯一对象路径
+        // 4. 唯一对象路径：文件名先去掉路径部分，防止伪造子路径；数据库记录仍保存原始名
         String originalName = file.getOriginalFilename();
+        String safeName = originalName == null ? "file"
+                : originalName.replace("\\", "/").replaceAll(".*/", "")
+                        .replaceAll("[\\x00-\\x1f\\x7f]", "");
         String objectName = module + "/" + userId + "/"
                 + UUID.randomUUID().toString().replace("-", "").substring(0, 8)
-                + "_" + originalName;
+                + "_" + safeName;
 
-        // 4. 上传到 MinIO
+        // 5. 上传到 MinIO
         minioUtil.upload(objectName, file.getInputStream(), file.getContentType());
 
-        // 5. 记录元数据
+        // 6. 记录元数据
         String url = minioUtil.getUrl(objectName);
         FileRecord record = new FileRecord();
         record.setUserId(userId);
